@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from data_loaders.mnist2mnist_m import mnist2mnist_m
 from solver import Solver
-from data_loaders.data_loader import get_loader
+from data_loaders.data_loader import get_loader, CelebA
 from torch.backends import cudnn
 from torchvision import transforms as T
 
@@ -28,50 +28,39 @@ def main(config):
     if not os.path.exists(config.result_dir):
         os.makedirs(config.result_dir)
 
-    # Data loader.
-    celeba_loader = None
-    rafd_loader = None
+    # Transform
+    transform = []
+    # if mode == 'train':
+    #    transform.append(T.RandomHorizontalFlip())
+    # transform.append(T.CenterCrop(crop_size))
+    # transform.append(T.Resize(image_size))
+    transform.append(T.ToTensor())
+    transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+    transform = T.Compose(transform)
 
-    if config.dataset in ['CelebA', 'Both']:
+    if config.dataset =='CelebA':
         """
         celeba_loader = get_loader(config.celeba_image_dir, config.attr_path, config.selected_attrs,
                                    config.celeba_crop_size, config.image_size, config.batch_size,
                                    'CelebA', config.mode, config.num_workers)
         """
-        transform = []
-        # if mode == 'train':
-        #    transform.append(T.RandomHorizontalFlip())
-        # transform.append(T.CenterCrop(crop_size))
-        # transform.append(T.Resize(image_size))
-        transform.append(T.ToTensor())
-        transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
-        transform = T.Compose(transform)
+        dataset = CelebA(config.celeba_image_dir, config.attr_path, config.selected_attrs, transform, config.mode)
 
-        # dataset = CelebA(image_dir, attr_path, selected_attrs, transform, mode)
+    if config.dataset == 'mnist2mnistm':
         dataset = mnist2mnist_m(config.mode, config.celeba_image_dir, transform)
 
-        celeba_loader = DataLoader(dataset=dataset,
-                                   batch_size=config.batch_size,
-                                   shuffle=(config.mode == 'train'),
-                                   num_workers=config.num_workers)
-    if config.dataset in ['RaFD', 'Both']:
-        rafd_loader = get_loader(config.rafd_image_dir, None, None,
-                                 config.rafd_crop_size, config.image_size, config.batch_size,
-                                 'RaFD', config.mode, config.num_workers)
+    celeba_loader = DataLoader(dataset=dataset,
+                               batch_size=config.batch_size,
+                               shuffle=(config.mode == 'train'),
+                               num_workers=config.num_workers)
 
     # Solver for training and testing StarGAN.
-    solver = Solver(celeba_loader, rafd_loader, config)
+    solver = Solver(celeba_loader, config)
 
     if config.mode == 'train':
-        if config.dataset in ['CelebA', 'RaFD']:
-            solver.train()
-        elif config.dataset in ['Both']:
-            solver.train_multi()
+        solver.train()
     elif config.mode == 'test':
-        if config.dataset in ['CelebA', 'RaFD']:
-            solver.test()
-        elif config.dataset in ['Both']:
-            solver.test_multi()
+        solver.test()
 
 
 if __name__ == '__main__':
@@ -92,7 +81,7 @@ if __name__ == '__main__':
     parser.add_argument('--lambda_gp', type=float, default=10, help='weight for gradient penalty')
 
     # Training configuration.
-    parser.add_argument('--dataset', type=str, default='CelebA', choices=['CelebA', 'RaFD', 'Both'])
+    parser.add_argument('--dataset', type=str, default='CelebA')
     parser.add_argument('--batch_size', type=int, default=16, help='mini-batch size')
     parser.add_argument('--num_iters', type=int, default=200000, help='number of total iterations for training D')
     parser.add_argument('--num_iters_decay', type=int, default=100000, help='number of iterations for decaying lr')
