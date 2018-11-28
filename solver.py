@@ -191,7 +191,8 @@ class Solver(object):
         data_iter = iter(data_loader)
         x_fixed, c_org = next(data_iter)
         x_fixed = x_fixed.to(self.device)
-        c_fixed_list = self.create_labels(c_org, self.c_dim, self.dataset, self.selected_attrs)
+        c_fixed_list = [self.label2onehot(torch.zeros(x_fixed.size(0)), 2).to(self.device),
+                        self.label2onehot(torch.ones(x_fixed.size(0)), 2).to(self.device)]
 
         # Learning rate cache for decaying.
         g_lr = self.g_lr
