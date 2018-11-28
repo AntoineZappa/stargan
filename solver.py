@@ -1,13 +1,14 @@
-from model import Generator
-from model import Discriminator
-from torch.autograd import Variable
-from torchvision.utils import save_image
-import torch
-import torch.nn.functional as F
+import datetime
+import time
+
 import numpy as np
 import os
-import time
-import datetime
+import torch
+import torch.nn.functional as F
+from torchvision.utils import save_image
+
+from model import Discriminator
+from model import Generator
 
 
 class Solver(object):
@@ -21,8 +22,7 @@ class Solver(object):
 
         # Model configurations.
         self.c_dim = config.c_dim
-        self.c2_dim = config.c2_dim
-        self.image_size = config.image_size
+        self.image_size = data_loader.dataset.image_size if config.image_resize is None else config.image_resize
         self.g_conv_dim = config.g_conv_dim
         self.d_conv_dim = config.d_conv_dim
         self.g_repeat_num = config.g_repeat_num
@@ -180,7 +180,7 @@ class Solver(object):
         x_fixed = x_fixed.to(self.device)
         c_fixed_list = self.create_labels(c_org, self.c_dim, self.dataset, self.selected_attrs)
 
-        #c_fixed_list = [self.label2onehot(torch.zeros(x_fixed.size(0)), 2).to(self.device),
+        # c_fixed_list = [self.label2onehot(torch.zeros(x_fixed.size(0)), 2).to(self.device),
         #                self.label2onehot(torch.ones(x_fixed.size(0)), 2).to(self.device)]
 
         # Learning rate cache for decaying.

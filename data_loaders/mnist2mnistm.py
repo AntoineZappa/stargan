@@ -1,18 +1,21 @@
-import struct
 import numpy as np
 import os
+import struct
 import torch
 from PIL import Image
+from torch.nn.functional import pad
 from torch.utils.data import Dataset
 from torchvision import transforms
-from torch.nn.functional import pad
+
 from data_loaders.DatasetMix import DatasetMix
 
 
-def mnist2mnist_m(mode, image_dir, transform):
+def mnist2mnistm(mode, image_dir, transform):
     d1 = MNIST(mode, image_dir, transform_list=[transform])
     d2 = MNIST_M(mode, image_dir, transform_list=[transform])
-    return DatasetMix(d1, d2)
+    d = DatasetMix(d1, d2)
+    d.image_size = 32
+    return d
 
 
 class MNIST(Dataset):

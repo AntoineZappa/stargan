@@ -1,13 +1,13 @@
-import os
 import argparse
 
-from torch.utils.data import DataLoader
-
-from data_loaders.mnist2mnist_m import mnist2mnist_m
-from solver import Solver
-from data_loaders.data_loader import get_loader, CelebA
+import os
 from torch.backends import cudnn
+from torch.utils.data import DataLoader
 from torchvision import transforms as T
+
+from data_loaders.celeba import CelebA
+from data_loaders.mnist2mnistm import mnist2mnistm
+from solver import Solver
 
 
 def str2bool(v):
@@ -28,34 +28,39 @@ def main(config):
     if not os.path.exists(config.result_dir):
         os.makedirs(config.result_dir)
 
-    # Transform
-    transform = []
-    # if mode == 'train':
-    #    transform.append(T.RandomHorizontalFlip())
-    # transform.append(T.CenterCrop(crop_size))
-    # transform.append(T.Resize(image_size))
-    transform.append(T.ToTensor())
-    transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
-    transform = T.Compose(transform)
-
-    if config.dataset =='CelebA':
+    if config.dataset == 'CelebA':
         """
         celeba_loader = get_loader(config.celeba_image_dir, config.attr_path, config.selected_attrs,
                                    config.celeba_crop_size, config.image_size, config.batch_size,
                                    'CelebA', config.mode, config.num_workers)
         """
-        dataset = CelebA(config.celeba_image_dir, config.attr_path, config.selected_attrs, transform, config.mode)
+        transform = []
+        if config.mode == 'train':
+            transform.append(T.RandomHorizontalFlip())
+            transform.append(T.CenterCrop(config.crop_size))
+            transform.append(T.Resize(config.image_resize))
+        transform.append(T.ToTensor())
+        transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+        transform = T.Compose(transform)
 
-    if config.dataset == 'mnist2mnistm':
-        dataset = mnist2mnist_m(config.mode, config.celeba_image_dir, transform)
+        dataset = CelebA(config.image_dir, config.selected_attrs, transform, config.mode)
 
-    celeba_loader = DataLoader(dataset=dataset,
-                               batch_size=config.batch_size,
-                               shuffle=(config.mode == 'train'),
-                               num_workers=config.num_workers)
+    elif config.dataset == 'mnist2mnistm':
+        transform = [T.ToTensor()]
+        transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+        transform = T.Compose(transform)
+
+        dataset = mnist2mnistm(config.mode, config.image_dir, transform)
+    else:
+        raise Exception("Dataset '{}' not recognized.".format(config.dataset))
+
+    data_loader = DataLoader(dataset=dataset,
+                             batch_size=config.batch_size,
+                             shuffle=(config.mode == 'train'),
+                             num_workers=config.num_workers)
 
     # Solver for training and testing StarGAN.
-    solver = Solver(celeba_loader, config)
+    solver = Solver(data_loader, config)
 
     if config.mode == 'train':
         solver.train()
@@ -67,15 +72,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Model configuration.
-    parser.add_argument('--c_dim', type=int, default=5, help='dimension of domain labels (1st dataset)')
-    parser.add_argument('--c2_dim', type=int, default=8, help='dimension of domain labels (2nd dataset)')
-    parser.add_argument('--celeba_crop_size', type=int, default=32, help='crop size for the CelebA dataset')
-    parser.add_argument('--rafd_crop_size', type=int, default=256, help='crop size for the RaFD dataset')
-    parser.add_argument('--image_size', type=int, default=32, help='image resolution')
+    parser.add_argument('--c_dim', type=int, default=5, help='dimension of domain labels')
+    # parser.add_argument('--c2_dim', type=int, default=8, help='dimension of domain labels (2nd dataset)')
+    parser.add_argument('--crop_size', type=int, default=None, help='crop size')
+    parser.add_argument('--image_resize', type=int, default=None, help='image resolution resize')
     parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
     parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
-    parser.add_argument('--g_repeat_num', type=int, default=0, help='number of residual blocks in G')
-    parser.add_argument('--d_repeat_num', type=int, default=4, help='number of strided conv layers in D')
+    parser.add_argument('--g_repeat_num', type=int, default=6, help='number of residual blocks in G')
+    parser.add_argument('--d_repeat_num', type=int, default=6, help='number of strided conv layers in D')
     parser.add_argument('--lambda_cls', type=float, default=1, help='weight for domain classification loss')
     parser.add_argument('--lambda_rec', type=float, default=10, help='weight for reconstruction loss')
     parser.add_argument('--lambda_gp', type=float, default=10, help='weight for gradient penalty')
@@ -98,18 +102,19 @@ if __name__ == '__main__':
     parser.add_argument('--test_iters', type=int, default=200000, help='test model from this step')
 
     # Miscellaneous.
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=1)
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'test'])
     parser.add_argument('--use_tensorboard', type=str2bool, default=True)
 
     # Directories.
-    parser.add_argument('--celeba_image_dir', type=str, default='data/CelebA_nocrop/images')
-    parser.add_argument('--attr_path', type=str, default='data/list_attr_celeba.txt')
-    parser.add_argument('--rafd_image_dir', type=str, default='data/RaFD/train')
-    parser.add_argument('--log_dir', type=str, default='stargan/logs')
-    parser.add_argument('--model_save_dir', type=str, default='stargan/models')
-    parser.add_argument('--sample_dir', type=str, default='stargan/samples')
-    parser.add_argument('--result_dir', type=str, default='stargan/results')
+    parser.add_argument('--image_dir', type=str, default='data/celeba')
+    # parser.add_argument('--attr_path', type=str, default='data/list_attr_celeba.txt')
+    parser.add_argument('--exp_dir', type=str, default='.')
+    parser.add_argument('--exp_name', type=str, default='stargan')
+    # parser.add_argument('--log_dir', type=str, default='stargan/logs')
+    # parser.add_argument('--model_save_dir', type=str, default='stargan/models')
+    # parser.add_argument('--sample_dir', type=str, default='stargan/samples')
+    # parser.add_argument('--result_dir', type=str, default='stargan/results')
 
     # Step size.
     parser.add_argument('--log_step', type=int, default=10)
@@ -118,5 +123,11 @@ if __name__ == '__main__':
     parser.add_argument('--lr_update_step', type=int, default=1000)
 
     config = parser.parse_args()
+
+    config.log_dir = os.path.join(config.exp_dir, config.exp_name, 'logs')
+    config.model_save_dir = os.path.join(config.exp_dir, config.exp_name, 'models')
+    config.sample_dir = os.path.join(config.exp_dir, config.exp_name, 'samples')
+    config.result_dir = os.path.join(config.exp_dir, config.exp_name, 'results')
+
     print(config)
     main(config)

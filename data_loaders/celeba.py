@@ -1,19 +1,17 @@
-from torch.utils import data
-from torchvision import transforms as T
-from torchvision.datasets import ImageFolder
-from PIL import Image
-import torch
 import os
 import random
+import torch
+from PIL import Image
+from torch.utils import data
 
 
 class CelebA(data.Dataset):
     """Dataset class for the CelebA dataset."""
 
-    def __init__(self, image_dir, attr_path, selected_attrs, transform, mode):
+    def __init__(self, image_dir, selected_attrs, transform, mode):
         """Initialize and preprocess the CelebA dataset."""
-        self.image_dir = image_dir
-        self.attr_path = attr_path
+        self.image_dir = os.path.join(image_dir, 'CelebA_nocrop/images')
+        self.attr_path = os.path.join(image_dir, 'list_attr_celeba.txt')
         self.selected_attrs = selected_attrs
         self.transform = transform
         self.mode = mode
@@ -66,27 +64,3 @@ class CelebA(data.Dataset):
     def __len__(self):
         """Return the number of images."""
         return self.num_images
-
-
-def get_loader(image_dir, attr_path, selected_attrs, crop_size=178, image_size=128,
-               batch_size=16, dataset='CelebA', mode='train', num_workers=1):
-    """Build and return a data loader."""
-    transform = []
-    if mode == 'train':
-        transform.append(T.RandomHorizontalFlip())
-    transform.append(T.CenterCrop(crop_size))
-    transform.append(T.Resize(image_size))
-    transform.append(T.ToTensor())
-    transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
-    transform = T.Compose(transform)
-
-    if dataset == 'CelebA':
-        dataset = CelebA(image_dir, attr_path, selected_attrs, transform, mode)
-    elif dataset == 'RaFD':
-        dataset = ImageFolder(image_dir, transform)
-
-    data_loader = data.DataLoader(dataset=dataset,
-                                  batch_size=batch_size,
-                                  shuffle=(mode == 'train'),
-                                  num_workers=num_workers)
-    return data_loader
