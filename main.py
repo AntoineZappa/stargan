@@ -8,6 +8,7 @@ from torch.backends import cudnn
 def str2bool(v):
     return v.lower() in ('true')
 
+
 def main(config):
     # For fast training.
     cudnn.benchmark = True
@@ -34,7 +35,6 @@ def main(config):
         rafd_loader = get_loader(config.rafd_image_dir, None, None,
                                  config.rafd_crop_size, config.image_size, config.batch_size,
                                  'RaFD', config.mode, config.num_workers)
-    
 
     # Solver for training and testing StarGAN.
     solver = Solver(celeba_loader, rafd_loader, config)
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     parser.add_argument('--lambda_cls', type=float, default=1, help='weight for domain classification loss')
     parser.add_argument('--lambda_rec', type=float, default=10, help='weight for reconstruction loss')
     parser.add_argument('--lambda_gp', type=float, default=10, help='weight for gradient penalty')
-    
+
     # Training configuration.
     parser.add_argument('--dataset', type=str, default='CelebA', choices=['CelebA', 'RaFD', 'Both'])
     parser.add_argument('--batch_size', type=int, default=16, help='mini-batch size')
