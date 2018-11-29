@@ -6,8 +6,8 @@ from data_loaders.DatasetMix import DatasetMix
 
 
 def gta2cityscapes(image_dir, transform):
-    d1 = UnpackedDataset(os.path.join(image_dir, 'GTAV', 'images'), transform) #3, 1052, 1914]
-    d2 = UnpackedDataset(os.path.join(image_dir, 'cityscapes', 'leftImg8bit'), transform)#3, 1024, 2048
+    d1 = UnpackedDataset(os.path.join(image_dir, 'GTAV', 'images'), transform)  # 3, 1052, 1914]
+    d2 = UnpackedDataset(os.path.join(image_dir, 'cityscapes', 'leftImg8bit'), transform)  # 3, 1024, 2048
     d = DatasetMix(d1, d2, mix_mode='balanced')
     return d
 
