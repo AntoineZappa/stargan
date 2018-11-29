@@ -54,7 +54,9 @@ def main(config):
         dataset = mnist2mnistm(config.mode, config.image_dir, transform)
     elif config.dataset == 'gta2cityscapes':
         transform = []
-        transform.append(T.RandomHorizontalFlip())
+        if config.mode == 'train':
+            transform.append(T.RandomHorizontalFlip())
+        transform.append(T.Resize(config.image_resize))
         transform.append(T.ToTensor())
         transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
         transform = T.Compose(transform)
@@ -84,7 +86,7 @@ if __name__ == '__main__':
     parser.add_argument('--c_dim', type=int, default=5, help='dimension of domain labels')
     # parser.add_argument('--c2_dim', type=int, default=8, help='dimension of domain labels (2nd dataset)')
     parser.add_argument('--crop_size', type=int, default=None, help='crop size')
-    parser.add_argument('--image_resize', type=int, default=None, help='image resolution resize')
+    parser.add_argument('--image_resize', type=int, nargs='+', default=None, help='image resolution resize')
     parser.add_argument('--g_conv_dim', type=int, default=64, help='number of conv filters in the first layer of G')
     parser.add_argument('--d_conv_dim', type=int, default=64, help='number of conv filters in the first layer of D')
     parser.add_argument('--g_repeat_num', type=int, default=6, help='number of residual blocks in G')
