@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms as T
 
 from data_loaders.celeba import CelebA
+from data_loaders.gta2cityscapes import gta2cityscapes
 from data_loaders.mnist2mnistm import mnist2mnistm
 from solver import Solver
 
@@ -51,6 +52,14 @@ def main(config):
         transform = T.Compose(transform)
 
         dataset = mnist2mnistm(config.mode, config.image_dir, transform)
+    elif config.dataset == 'gta2cityscapes':
+        transform = []
+        transform.append(T.RandomHorizontalFlip())
+        transform.append(T.ToTensor())
+        transform.append(T.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)))
+        transform = T.Compose(transform)
+
+        dataset = gta2cityscapes(config.image_dir, transform)
     else:
         raise Exception("Dataset '{}' not recognized.".format(config.dataset))
 
